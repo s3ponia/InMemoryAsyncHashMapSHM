@@ -2,8 +2,9 @@
 
 #include <chrono>
 #include <list>
+#include <mutex>
 #include <optional>
-#include <shared_mutex>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -35,5 +36,5 @@ private:
   BucketCnt bucket(std::size_t hash) const;
 
   ContainerType hashTable_;
-  mutable std::vector<std::shared_mutex> mutexes_;
+  mutable std::vector<std::mutex> mutexes_;
 };

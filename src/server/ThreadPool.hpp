@@ -1,7 +1,9 @@
 #pragma once
 
+#include <atomic>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <queue>
 #include <thread>
 #include <vector>
@@ -21,7 +23,8 @@ public:
       callbacks_.push(func);
     }
 
-    restore();
+    if (callbacks_.size() >= maxWorkers())
+      restore();
   }
 
   void restore() {

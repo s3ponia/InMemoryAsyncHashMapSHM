@@ -1,6 +1,8 @@
 #include "CyclicBufferShm.hpp"
 
 #include <cassert>
+#include <cstring>
+#include <stdexcept>
 
 std::size_t CyclicBufferShm::usedSpace() const noexcept {
   if (begin_ < end_) {

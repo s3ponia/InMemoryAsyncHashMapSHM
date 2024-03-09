@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include <atomic>
 #include <fcntl.h>
 #include <semaphore.h>
 #include <stdio.h>
@@ -12,7 +13,7 @@
 #include "utility/constants.hpp"
 
 int initShm() {
-  if (int shm = shm_open(SHARED_MEMORY_OBJECT_NAME, O_CREAT | O_RDONLY, 0777);
+  if (int shm = shm_open(SHARED_MEMORY_OBJECT_NAME, O_CREAT | O_RDWR, 0777);
       shm != -1) {
     if (ftruncate(shm, SHARED_MEMORY_OBJECT_SIZE + 1) == -1) {
       perror("ftruncate");

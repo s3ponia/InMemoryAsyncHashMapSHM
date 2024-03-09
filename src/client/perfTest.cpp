@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <string_view>
@@ -86,7 +87,6 @@ int main() {
 
     const auto operationsNumber = 1'000'000;
 
-    testReadPerformance(client, operationsNumber);
     testInsertPerformance(client, operationsNumber);
     testDeletePerformance(client, operationsNumber);
     testReadPerformance(client, operationsNumber);
