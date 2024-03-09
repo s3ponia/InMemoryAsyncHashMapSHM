@@ -48,12 +48,13 @@ private:
   }
 
   struct Worker {
-    Worker(ThreadPool *pool) : pool_(pool), thread_([this] { run(); }) {}
+    Worker(ThreadPool *pool) : pool_(pool), thread_() { restore(); }
 
     void restore() {
       bool prev{false};
       if (running_.compare_exchange_strong(prev, true)) {
-        thread_.join();
+        if (thread_.joinable())
+          thread_.join();
         thread_ = std::thread{[this] { run(); }};
       }
     }
@@ -89,7 +90,7 @@ private:
 
     ThreadPool *pool_;
     std::thread thread_;
-    std::atomic_bool running_{true};
+    std::atomic_bool running_{false};
   };
 
   std::queue<std::function<void()>> callbacks_;

@@ -27,14 +27,22 @@ void Server::run() {
         //           << hashMap_.read(key).value_or("no value") << '"' << '\n';
       });
       break;
+    case Command::STAT: {
+      threadPool_.shutdown();
+      const auto end = std::chrono::steady_clock::now();
+      writeStat(begin, end);
+      threadPool_.restore();
+      break;
+    }
     case Command::EXIT:
       threadPool_.shutdown();
-      goto ext;
+      return;
     }
   }
-ext:
-  const auto end = std::chrono::steady_clock::now();
+}
 
+void Server::writeStat(std::chrono::steady_clock::time_point begin,
+                       std::chrono::steady_clock::time_point end) {
   const auto running_time =
       std::chrono::duration_cast<std::chrono::milliseconds>(end - begin) -
       waiting_time_;
@@ -64,7 +72,7 @@ int Server::readInt() {
   return std::stoi(intStr);
 }
 
-std::string Server::readString(int sz) {
+std::string Server::readString(std::size_t sz) {
   if (cursor_ + sz < shared_memory_.size()) {
     const auto res = std::string{shared_memory_.substr(cursor_, sz)};
     cursor_ += sz;
@@ -112,7 +120,7 @@ auto Server::parseRead() -> Command {
 
   auto keyString = readString(keySize);
 
-  return Command{Command::READ, std::move(keyString)};
+  return Command{Command::READ, std::move(keyString), {}};
 }
 
 // format: D(keySize):(keyString)
@@ -126,7 +134,7 @@ auto Server::parseDelete() -> Command {
 
   auto keyString = readString(keySize);
 
-  return Command{Command::DELETE, std::move(keyString)};
+  return Command{Command::DELETE, std::move(keyString), {}};
 }
 
 // format: E
@@ -134,7 +142,15 @@ auto Server::parseExit() -> Command {
   assert(shared_memory_[cursor_] == 'E');
   incCursor();
 
-  return Command{Command::EXIT};
+  return Command{Command::EXIT, {}, {}};
+}
+
+// format: S
+auto Server::parseStat() -> Command {
+  assert(shared_memory_[cursor_] == 'S');
+  incCursor();
+
+  return Command{Command::STAT, {}, {}};
 }
 
 auto Server::parseNextCommand() -> Command {
@@ -156,6 +172,8 @@ auto Server::parseNextCommand() -> Command {
     return parseRead();
   case 'E':
     return parseExit();
+  case 'S':
+    return parseStat();
   }
   throw std::runtime_error{"Unhandled Command type"};
 }

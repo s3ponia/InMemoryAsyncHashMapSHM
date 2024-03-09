@@ -84,3 +84,12 @@ void Client::exit() {
   commited = true;
   sem_post(semaphore_);
 }
+
+// format: S
+void Client::stat() {
+  bool commited = false;
+  auto guardType = WriteGuard{this, "S", commited};
+  guardType.write();
+  commited = true;
+  sem_post(semaphore_);
+}

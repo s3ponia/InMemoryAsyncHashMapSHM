@@ -34,6 +34,6 @@ private:
 
   BucketCnt bucket(std::size_t hash) const;
 
-  mutable std::vector<std::shared_mutex> mutexes_;
   ContainerType hashTable_;
+  mutable std::vector<std::shared_mutex> mutexes_;
 };

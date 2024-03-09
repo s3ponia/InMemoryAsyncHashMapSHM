@@ -51,20 +51,23 @@ void testInsertPerformance(Client &client, int insertCounts) {
   }
 
   std::cout << insertCounts << " inserts" << std::endl;
+  client.stat();
 }
 
-void testReadPerformance(sem_t *semaphore, Client &client, int insertCounts) {
+void testReadPerformance(Client &client, int insertCounts) {
   for (int i = 0; i < insertCounts; ++i) {
     client.read(random_string(5));
   }
   std::cout << insertCounts << " reads" << std::endl;
+  client.stat();
 }
 
-void testDeletePerformance(sem_t *semaphore, Client &client, int insertCounts) {
+void testDeletePerformance(Client &client, int insertCounts) {
   for (int i = 0; i < insertCounts; ++i) {
     client.erase(random_string(5));
   }
   std::cout << insertCounts << " deletes" << std::endl;
+  client.stat();
 }
 
 int main() {
@@ -83,9 +86,10 @@ int main() {
 
     const auto operationsNumber = 1'000'000;
 
+    testReadPerformance(client, operationsNumber);
     testInsertPerformance(client, operationsNumber);
-    testReadPerformance(semaphore, client, operationsNumber);
-    testDeletePerformance(semaphore, client, operationsNumber);
+    testDeletePerformance(client, operationsNumber);
+    testReadPerformance(client, operationsNumber);
     client.exit();
   } else {
     exit(EXIT_FAILURE);

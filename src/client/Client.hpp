@@ -15,6 +15,7 @@ public:
   void erase(std::string_view key);
   void read(std::string_view key);
   void exit();
+  void stat();
 
 private:
   struct WriteGuard {

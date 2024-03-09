@@ -18,7 +18,7 @@ public:
 
 private:
   struct Command {
-    enum { INSERT, READ, DELETE, EXIT } type;
+    enum { INSERT, READ, DELETE, STAT, EXIT } type;
     std::string key;
     std::string value;
   };
@@ -27,18 +27,22 @@ private:
 
   int readInt();
 
-  std::string readString(int sz);
+  std::string readString(std::size_t sz);
 
   Command parseInsert();
   Command parseRead();
   Command parseDelete();
   Command parseExit();
+  Command parseStat();
+
+  void writeStat(std::chrono::steady_clock::time_point begin,
+                 std::chrono::steady_clock::time_point end);
 
   Command parseNextCommand();
 
   std::size_t operation_counter_{};
 
-  int cursor_{};
+  std::size_t cursor_{};
   std::string_view shared_memory_;
   sem_t *semaphore_;
 
