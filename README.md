@@ -3,6 +3,10 @@
 cmake . -B build
 cmake --build build
 ```
+or
+```
+make build
+```
 <img width="643" alt="image" src="https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/ca7252e3-6fca-409b-9c59-bc80279f63c6">
 
 # Task Description
@@ -29,6 +33,18 @@ operations, try to optimize the granularity
      - Enqueue requests/operations (insert, read a bucket, delete) to
 the server (that will operate on the the hash table) via shared memory
 buffer (POSIX shm)
+# Makefile
+`make build`
+
+<img width="735" alt="image" src="https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/c79cdb26-4cd3-4fb2-8a22-5f58b8005a89">
+
+`make server BUCKETS_CNT=<bucket cnt>`
+
+<img width="598" alt="image" src="https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/986dc458-8dc7-4452-98e1-d1534f14c53e">
+
+`make client`
+
+<img width="582" alt="image" src="https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/5168eaaf-fb0a-49b6-95c2-a47faa26f96a">
 
 # Server
 `./server <number of buckets in hash table>`
