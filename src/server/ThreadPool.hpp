@@ -23,6 +23,7 @@ public:
       callbacks_.push(func);
     }
 
+    workers_[0]->restore();
     if (callbacks_.size() >= maxWorkers())
       restore();
   }
@@ -50,12 +51,14 @@ private:
     Worker(ThreadPool *pool) : pool_(pool), thread_() { restore(); }
 
     void restore() {
-      bool prev{false};
-      if (running_.compare_exchange_strong(prev, true)) {
-        if (thread_.joinable())
-          thread_.join();
-        thread_ = std::thread{[this] { run(); }};
+      if (running_.load(std::memory_order::memory_order_relaxed)) {
+        return;
       }
+
+      running_.store(true, std::memory_order::memory_order_relaxed);
+      if (thread_.joinable())
+        thread_.join();
+      thread_ = std::thread{[this] { run(); }};
     }
 
     void shutdown() {
@@ -67,7 +70,7 @@ private:
     void run() {
       while (runOnce()) {
       }
-      running_ = false;
+      running_.store(false, std::memory_order::memory_order_relaxed);
     }
 
     bool runOnce() {
