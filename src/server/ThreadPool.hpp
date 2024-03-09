@@ -16,16 +16,12 @@ public:
   }
 
   void submitTask(std::function<void()> func) {
-    std::size_t callbacks_size{};
     {
       std::lock_guard guard{mutex_};
       callbacks_.push(func);
-      callbacks_size = callbacks_.size();
     }
 
-    if (callbacks_size > maxWorkers()) {
-      restore();
-    }
+    restore();
   }
 
   void restore() {

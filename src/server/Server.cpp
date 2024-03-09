@@ -22,9 +22,10 @@ void Server::run() {
       break;
     case Command::READ:
       threadPool_.submitTask([this, key = std::string{nextCommand.key}] {
-        hashMap_.read(key);
-        // std::cout << '"' << key << "\": \""
-        //           << hashMap_.read(key).value_or("no value") << '"' << '\n';
+        // hashMap_.read(key);
+        std::cout << '"' << key << "\": \""
+                  << hashMap_.read(key).value_or("no value") << '"'
+                  << std::endl;
       });
       break;
     case Command::STAT: {
@@ -175,5 +176,6 @@ auto Server::parseNextCommand() -> Command {
   case 'S':
     return parseStat();
   }
-  throw std::runtime_error{"Unhandled Command type"};
+  throw std::runtime_error{std::string{"Unhandled Command type: "} +
+                           shared_memory_[cursor_]};
 }

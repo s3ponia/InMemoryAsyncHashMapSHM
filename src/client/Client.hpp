@@ -18,27 +18,6 @@ public:
   void stat();
 
 private:
-  struct WriteGuard {
-    WriteGuard(Client *client, std::string_view data, bool &completeFlag)
-        : client_(client), data_(data), completeFlag_(completeFlag) {}
-
-    void write() {
-      client_->writeString(data_);
-      data_written_ = true;
-    }
-
-    ~WriteGuard() {
-      if (data_written_ && !completeFlag_)
-        client_->buffer_.eraseLastData(data_.size());
-    }
-
-  private:
-    Client *client_;
-    std::string_view data_;
-    bool data_written_{false};
-    bool &completeFlag_;
-  };
-
   void writeString(std::string_view val);
 
   std::size_t stringSize(std::size_t number);
