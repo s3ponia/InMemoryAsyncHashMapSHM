@@ -69,16 +69,25 @@ Test contains 3 steps:
 
 ## Results:
 with 127 buckets:
-1. took 4644 ms
-2. took 4926 ms
-3. took 259781 ms (~260 sec)
-<img width="431" alt="image" src="https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/8009cfba-1a32-435f-ac88-566fd505695d">
+1. took 1773 ms
+2. took 1341 ms
+3. took 252436 ms (~250 sec)
+<img width="632" alt="image" src="https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/d42d11be-919b-4fdf-b700-56157ed31c34">
+
 
 with 1021 buckets:
-1. took 4562 ms
-2. took 4867 ms
-3. took 31341 ms (~30 sec)
+1. took 1792 ms
+2. took 1355 ms
+3. took 32233 ms (~32 sec)
 
-<img width="466" alt="image" src="https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/ce6c6041-4926-4d84-85aa-b2a23174daca">
+<img width="627" alt="image" src="https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/b5523312-3323-468b-8796-0c701ee85be2">
+
+with 3571 buckets:
+1. took 1805 ms
+2. took 1215 ms
+3. took 9171 ms (~9 sec)
+
+<img width="651" alt="image" src="https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/3a77bb5c-4c1c-4139-a454-a3429dce3b89">
+
 
 

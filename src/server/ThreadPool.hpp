@@ -1,101 +1,108 @@
 #pragma once
 
-#include <atomic>
+#include <condition_variable>
 #include <functional>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <stdexcept>
 #include <thread>
 #include <vector>
 
 class ThreadPool {
 public:
-  ThreadPool() {
-    workers_.reserve(maxWorkers());
-    for (std::size_t i = 0; i < maxWorkers(); ++i) {
-      workers_.push_back(std::make_unique<Worker>(this));
-    }
-  }
-
-  void submitTask(std::function<void()> func) {
-    {
-      std::lock_guard guard{mutex_};
-      callbacks_.push(func);
-    }
-
-    workers_[0]->restore();
-    if (callbacks_.size() >= maxWorkers())
-      restore();
-  }
-
-  void restore() {
-    for (auto &w : workers_) {
-      w->restore();
-    }
-  }
-
-  void shutdown() {
-    for (auto &w : workers_) {
-      w->shutdown();
-    }
-  }
-
-  ~ThreadPool() { shutdown(); }
+  ThreadPool(size_t = std::thread::hardware_concurrency());
+  template <class F, class... Args> auto submitTask(F &&f, Args &&...args);
+  void shutdown();
+  void restore();
+  ~ThreadPool();
 
 private:
-  static std::size_t maxWorkers() {
-    return std::thread::hardware_concurrency();
-  }
+  // need to keep track of threads so we can join them
+  std::vector<std::thread> workers;
+  // the task queue
+  std::queue<std::function<void()>> tasks;
 
-  struct Worker {
-    Worker(ThreadPool *pool) : pool_(pool), thread_() { restore(); }
-
-    void restore() {
-      if (running_.load(std::memory_order::memory_order_relaxed)) {
-        return;
-      }
-
-      running_.store(true, std::memory_order::memory_order_relaxed);
-      if (thread_.joinable())
-        thread_.join();
-      thread_ = std::thread{[this] { run(); }};
-    }
-
-    void shutdown() {
-      if (thread_.joinable())
-        thread_.join();
-    }
-
-  private:
-    void run() {
-      while (runOnce()) {
-      }
-      running_.store(false, std::memory_order::memory_order_relaxed);
-    }
-
-    bool runOnce() {
-      std::function<void()> funcToRun;
-      {
-        std::lock_guard guard{pool_->mutex_};
-        if (!pool_->callbacks_.empty()) {
-          funcToRun = pool_->callbacks_.front();
-          pool_->callbacks_.pop();
-        }
-      }
-      if (funcToRun) {
-        funcToRun();
-        return true;
-      } else {
-        return false;
-      }
-    }
-
-    ThreadPool *pool_;
-    std::thread thread_;
-    std::atomic_bool running_{false};
-  };
-
-  std::queue<std::function<void()>> callbacks_;
-  std::mutex mutex_;
-  std::vector<std::unique_ptr<Worker>> workers_;
+  // synchronization
+  std::mutex queue_mutex;
+  std::condition_variable condition;
+  bool stop;
 };
+
+// the constructor just launches some amount of workers
+inline ThreadPool::ThreadPool(size_t threads) : stop(false) {
+  for (size_t i = 0; i < threads; ++i)
+    workers.emplace_back([this] {
+      for (;;) {
+        std::function<void()> task;
+
+        {
+          std::unique_lock<std::mutex> lock(this->queue_mutex);
+          this->condition.wait(
+              lock, [this] { return this->stop || !this->tasks.empty(); });
+          if (this->stop && this->tasks.empty())
+            return;
+          task = std::move(this->tasks.front());
+          this->tasks.pop();
+        }
+
+        task();
+      }
+    });
+}
+
+inline void ThreadPool::restore() {
+  stop = false;
+  const auto sz = workers.size();
+  workers.clear();
+  for (size_t i = 0; i < sz; ++i)
+    workers.emplace_back([this] {
+      for (;;) {
+        std::function<void()> task;
+
+        {
+          std::unique_lock<std::mutex> lock(this->queue_mutex);
+          this->condition.wait(
+              lock, [this] { return this->stop || !this->tasks.empty(); });
+          if (this->stop && this->tasks.empty())
+            return;
+          task = std::move(this->tasks.front());
+          this->tasks.pop();
+        }
+
+        task();
+      }
+    });
+}
+
+// add new work item to the pool
+template <class F, class... Args>
+auto ThreadPool::submitTask(F &&f, Args &&...args) {
+  {
+    std::unique_lock<std::mutex> lock(queue_mutex);
+
+    // don't allow enqueueing after stopping the pool
+    if (stop)
+      throw std::runtime_error("enqueue on stopped ThreadPool");
+
+    tasks.emplace(std::forward<F>(f), std::forward<Args>(args)...);
+  }
+  condition.notify_one();
+}
+
+inline void ThreadPool::shutdown() {
+  {
+    std::unique_lock<std::mutex> lock(queue_mutex);
+    stop = true;
+  }
+  condition.notify_all();
+  for (std::thread &worker : workers) {
+    if (worker.joinable()) {
+      worker.join();
+    }
+  }
+}
+
+// the destructor joins all threads
+inline ThreadPool::~ThreadPool() { shutdown(); }
