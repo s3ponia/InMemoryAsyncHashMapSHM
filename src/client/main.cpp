@@ -41,8 +41,8 @@ int main() {
     char *addr = (char *)mmap(0, SHARED_MEMORY_OBJECT_SIZE + 1,
                               PROT_WRITE | PROT_READ, MAP_SHARED, shm, 0);
 
-    CyclicBufferShm shared_memory{addr, SHARED_MEMORY_OBJECT_SIZE};
-    Client client{shared_memory, semaphore};
+    Client client{addr, SHARED_MEMORY_OBJECT_SIZE};
+    auto conn = client.connect().value();
 
     while (true) {
       try {
@@ -51,14 +51,14 @@ int main() {
 
         if (command == "read") {
           const auto key = readStr("Enter key: ");
-          client.read(key);
+          conn.read(key);
         } else if (command == "insert") {
           const auto key = readStr("Enter key: ");
           const auto val = readStr("Enter value: ");
-          client.insert(key, val);
+          conn.insert(key, val);
         } else if (command == "delete") {
           const auto key = readStr("Enter key: ");
-          client.erase(key);
+          conn.erase(key);
         } else {
           std::cerr << "invalid operation: " << command << std::endl;
         }

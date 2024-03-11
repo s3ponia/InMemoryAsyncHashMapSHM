@@ -13,12 +13,14 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 include_directories(src)
 
-set(SERVER_SOURCE_FILES src/server/main.cpp src/utility/CyclicBufferShm.cpp src/server/HashMap.cpp src/server/Server.cpp src/server/ThreadPool.cpp src/server/Connection.cpp)
+file(GLOB UTILITY_SOUCE_FILES "src/utility/*")
 
-set(CLIENT_SOURCE_FILES  src/client/Client.cpp src/utility/CyclicBufferShm.cpp)
+set(SERVER_SOURCE_FILES src/server/main.cpp src/server/Server.cpp)
 
-add_executable(server ${SERVER_SOURCE_FILES})
+set(CLIENT_SOURCE_FILES src/client/Client.cpp)
 
-add_executable(client ${CLIENT_SOURCE_FILES} src/client/main.cpp)
+add_executable(server ${SERVER_SOURCE_FILES} ${UTILITY_SOUCE_FILES})
 
-add_executable(perf_test_client ${CLIENT_SOURCE_FILES} src/client/perfTest.cpp)
+add_executable(client ${CLIENT_SOURCE_FILES} ${UTILITY_SOUCE_FILES} src/client/main.cpp)
+
+# add_executable(perf_test_client ${CLIENT_SOURCE_FILES} ${UTILITY_SOUCE_FILES} src/client/perfTest.cpp)

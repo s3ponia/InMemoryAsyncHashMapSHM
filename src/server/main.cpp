@@ -60,11 +60,11 @@ int main(int argc, char **argv) {
   }
 
   if (auto shm = initShm(); shm != -1) {
-    char *addr = (char *)mmap(0, SHARED_MEMORY_OBJECT_SIZE + 1, PROT_READ,
-                              MAP_SHARED, shm, 0);
-    std::string_view shared_memory(addr, SHARED_MEMORY_OBJECT_SIZE);
-    // Server server{shared_memory, semaphore, hashMapSize};
-    // server.run();
+    char *addr = (char *)mmap(0, SHARED_MEMORY_OBJECT_SIZE + 1,
+                              PROT_READ | PROT_WRITE, MAP_SHARED, shm, 0);
+
+    Server server{addr, SHARED_MEMORY_OBJECT_SIZE, hashMapSize};
+    server.run();
   } else {
     exit(EXIT_FAILURE);
   }

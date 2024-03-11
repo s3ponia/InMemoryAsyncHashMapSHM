@@ -5,39 +5,43 @@
 #include <semaphore.h>
 #include <string_view>
 
-#include "Connection.hpp"
-#include "HashMap.hpp"
-#include "ThreadPool.hpp"
+#include "utility/HashMap.hpp"
+#include "utility/ServerConnection.hpp"
+#include "utility/ThreadPool.hpp"
+#include "utility/constants.hpp"
 
 class Server {
 public:
-  Server(char *shared_memory, sem_t *conn_semaphore_req,
-         sem_t *conn_semaphore_resp, std::size_t hashMapSize)
-      : shared_memory_(shared_memory), conn_semaphore_req_(conn_semaphore_req),
-        conn_semaphore_resp_(conn_semaphore_resp), hashMap_(hashMapSize) {
+  Server(char *shared_memory, std::size_t shared_memory_size,
+         std::size_t hashMapSize)
+      : shared_memory_(shared_memory), shared_memory_size_(shared_memory_size),
+        conn_semaphore_req_(connSemaphoreReq()),
+        conn_semaphore_resp_(connSemaphoreResp()),
+        conn_semaphore_rcv_(connSemaphoreRcv()), hashMap_(hashMapSize) {
     fillOffsets();
   }
 
   void run();
 
 private:
-  void runConnection(std::shared_ptr<Connection> conn);
-  void pingConnections();
+  void runServerConnection(std::shared_ptr<ServerConnection> conn);
+  void pingServerConnections();
 
   void fillOffsets();
 
-  std::optional<std::shared_ptr<Connection>> waitConnection();
+  std::optional<std::shared_ptr<ServerConnection>> waitServerConnection();
   void writeOffset(std::size_t off);
 
-  std::shared_ptr<Connection> initConnectionInShm(std::size_t off);
+  std::shared_ptr<ServerConnection> initServerConnectionInShm(std::size_t off);
 
   char *shared_memory_;
   std::size_t shared_memory_size_;
 
   sem_t *conn_semaphore_req_;
   sem_t *conn_semaphore_resp_;
+  sem_t *conn_semaphore_rcv_;
 
-  std::list<std::shared_ptr<Connection>> connections_;
+  std::list<std::shared_ptr<ServerConnection>> serverConnections_;
   std::vector<std::size_t> free_offsets_;
 
   HashMap hashMap_;

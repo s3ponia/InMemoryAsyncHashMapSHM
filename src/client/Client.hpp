@@ -2,25 +2,30 @@
 
 #include <semaphore.h>
 
-#include <string_view>
+#include <atomic>
+#include <mutex>
+#include <optional>
+#include <vector>
 
-#include "utility/CyclicBufferShm.hpp"
+#include "utility/Connection.hpp"
+#include "utility/ThreadPool.hpp"
+#include "utility/constants.hpp"
 
 class Client {
 public:
-  Client(CyclicBufferShm buffer, sem_t *semaphore)
-      : buffer_(buffer), semaphore_(semaphore) {}
+  Client(char *shared_memory, std::size_t shared_memory_size);
 
-  void insert(std::string_view key, std::string_view value);
-  void erase(std::string_view key);
-  void read(std::string_view key);
+  std::optional<Connection> connect();
+
+  ~Client();
 
 private:
-  std::size_t stringSize(std::size_t number);
+  char *shared_memory_;
 
-  std::size_t dataSize() const;
-  std::size_t freeSpace() const;
+  std::size_t *offset_in_shm_;
+  sem_t *conn_semaphore_req_;
+  sem_t *conn_semaphore_resp_;
+  sem_t *conn_semaphore_rcv_;
 
-  CyclicBufferShm buffer_;
-  sem_t *semaphore_;
+  std::atomic_bool running_{true};
 };

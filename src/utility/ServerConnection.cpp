@@ -1,26 +1,17 @@
-#include "Connection.hpp"
+#include "ServerConnection.hpp"
 
-#include <cassert>
-#include <iostream>
-#include <thread>
+ServerConnection::ServerConnection(std::size_t offset,
+                                   SharedMemoryBuff &shm_buffer,
+                                   HashMap &hashMap, ThreadPool &threadPool)
+    : Connection(offset, shm_buffer), hashMap_(hashMap),
+      threadPool_(threadPool) {}
 
-std::size_t Connection::buffOffset() { return shm_buffer_.offset; }
-
-bool Connection::ping() {
-  sem_post(sem_ping_);
-  errno = 0;
-  for (int i = 0; i < 5; ++i) {
-    sem_trywait(sem_ping_);
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
-  }
-  return errno == EAGAIN;
-}
-
-bool Connection::handleCommand() {
+bool ServerConnection::handleCommand() {
   auto nextCommand = parseNextCommand();
   if (!nextCommand.has_value()) {
     return false;
   }
+
   switch (nextCommand->type) {
   case Command::INSERT:
     threadPool_.submitTask([this, key = std::string{nextCommand->key},
@@ -29,7 +20,7 @@ bool Connection::handleCommand() {
       hashMap_.put(key, value, op_cnt);
       {
         std::unique_lock lock{output_mutex_};
-        output_.writeInsert(key, value);
+        responses_shm_.writeInsert(key, value);
       }
       sem_post(sem_resp_);
     });
@@ -41,7 +32,7 @@ bool Connection::handleCommand() {
 
       {
         std::unique_lock lock{output_mutex_};
-        output_.writeErase(key);
+        responses_shm_.writeErase(key);
       }
       sem_post(sem_resp_);
     });
@@ -50,13 +41,15 @@ bool Connection::handleCommand() {
     threadPool_.submitTask([this, key = std::string{nextCommand->key}] {
       const auto value = hashMap_.read(key);
 
+      std::cout << key << ": " << value.value_or("not found") << std::endl;
+
       {
         std::unique_lock lock{output_mutex_};
 
         if (value.has_value()) {
-          output_.writeReadResponse(key, *value);
+          responses_shm_.writeReadResponse(key, *value);
         } else {
-          output_.writeReadEmptyResponse(key);
+          responses_shm_.writeReadEmptyResponse(key);
         }
       }
 
@@ -65,11 +58,4 @@ bool Connection::handleCommand() {
     break;
   }
   return true;
-}
-
-auto Connection::parseNextCommand() -> std::optional<Command> {
-  if (sem_trywait(sem_req_) != 0)
-    return std::nullopt;
-
-  return input_.parseNextCommandFromBegin();
 }

@@ -4,18 +4,21 @@
 
 #include "utility/SharedMemoryBuff.hpp"
 
-void Server::runConnection(std::shared_ptr<Connection> conn) {
+void Server::runServerConnection(std::shared_ptr<ServerConnection> conn) {
   conn->handleCommand();
   threadPool_.submitTask([conn = std::move(conn), this]() mutable {
-    runConnection(std::move(conn));
+    runServerConnection(std::move(conn));
   });
 }
 
-void Server::pingConnections() {
-  for (auto it = connections_.begin(); it != connections_.end();) {
+void Server::pingServerConnections() {
+  for (auto it = serverConnections_.begin(); it != serverConnections_.end();) {
     if (!(*it)->ping()) {
+      std::clog << "Client with offset " << (*it)->buffOffset()
+                << " is not responding" << std::endl;
       free_offsets_.push_back((*it)->buffOffset());
-      it = connections_.erase(it);
+      (*it)->unlinkSemaphores();
+      it = serverConnections_.erase(it);
     } else {
       ++it;
     }
@@ -24,12 +27,16 @@ void Server::pingConnections() {
 
 void Server::run() {
   while (true) {
-    pingConnections();
-    const auto conn = waitConnection();
+    pingServerConnections();
+    const auto conn = waitServerConnection();
     if (conn.has_value()) {
-      connections_.push_back(*conn);
-      threadPool_.submitTask(
-          [conn = *conn, this]() mutable { runConnection(std::move(conn)); });
+      std::clog << "Established connection with offset "
+                << (*conn)->buffOffset() << std::endl;
+
+      serverConnections_.push_back(*conn);
+      threadPool_.submitTask([conn = *conn, this]() mutable {
+        runServerConnection(std::move(conn));
+      });
     }
   }
 }
@@ -47,14 +54,15 @@ void Server::fillOffsets() {
   }
 }
 
-std::shared_ptr<Connection> Server::initConnectionInShm(std::size_t off) {
+std::shared_ptr<ServerConnection>
+Server::initServerConnectionInShm(std::size_t off) {
   SharedMemoryBuff *buff = new (shared_memory_ + off) SharedMemoryBuff{};
-  buff->offset = off;
 
-  return std::make_shared<Connection>(*buff, hashMap_, threadPool_);
+  return std::make_shared<ServerConnection>(off, *buff, hashMap_, threadPool_);
 }
 
-std::optional<std::shared_ptr<Connection>> Server::waitConnection() {
+std::optional<std::shared_ptr<ServerConnection>>
+Server::waitServerConnection() {
   sem_wait(conn_semaphore_req_);
   if (free_offsets_.empty()) {
     writeOffset(-1);
@@ -63,8 +71,9 @@ std::optional<std::shared_ptr<Connection>> Server::waitConnection() {
   }
   const auto offset = free_offsets_.back();
   free_offsets_.pop_back();
-  const auto connection = initConnectionInShm(offset);
+  const auto serverConnection = initServerConnectionInShm(offset);
   writeOffset(offset);
   sem_post(conn_semaphore_resp_);
-  return connection;
+  sem_wait(conn_semaphore_rcv_);
+  return serverConnection;
 }

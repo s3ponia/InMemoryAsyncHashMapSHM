@@ -1,28 +1,35 @@
 #include "Client.hpp"
 
-#include <string>
+Client::Client(char *shared_memory, std::size_t shared_memory_size)
+    : shared_memory_(shared_memory),
+      offset_in_shm_(
+          (size_t *)(shared_memory + shared_memory_size - sizeof(std::size_t))),
+      conn_semaphore_req_(connSemaphoreReq()),
+      conn_semaphore_resp_(connSemaphoreResp()),
+      conn_semaphore_rcv_(connSemaphoreRcv()) {}
 
-std::size_t Client::stringSize(std::size_t number) {
-  return std::to_string(number).size();
-}
+Client::~Client() { running_ = false; }
 
-// format: I(keySize):(valueSize):(key)(value)
-void Client::insert(std::string_view key, std::string_view value) {
-  buffer_.writeInsert(key, value);
+std::optional<Connection> Client::connect() {
+  sem_post(conn_semaphore_req_);
+  sem_wait(conn_semaphore_resp_);
+  const auto offset = *offset_in_shm_;
+  sem_post(conn_semaphore_rcv_);
 
-  sem_post(semaphore_);
-}
+  if (offset == -1) {
+    return std::nullopt;
+  } else {
+    auto res =
+        Connection{offset, *(SharedMemoryBuff *)(shared_memory_ + offset)};
 
-// format: D(keySize):(key)
-void Client::erase(std::string_view key) {
-  buffer_.writeErase(key);
+    std::clog << "Established connection with offset " << res.buffOffset()
+              << std::endl;
+    std::thread{[this, res]() mutable {
+      while (running_) {
+        res.waitPing();
+      }
+    }}.detach();
 
-  sem_post(semaphore_);
-}
-
-// format: R(keySize):(key)
-void Client::read(std::string_view key) {
-  buffer_.writeRead(key);
-
-  sem_post(semaphore_);
+    return res;
+  }
 }
