@@ -22,10 +22,10 @@ void Server::run() {
       break;
     case Command::READ:
       threadPool_.submitTask([this, key = std::string{nextCommand.key}] {
-        // hashMap_.read(key);
-        std::cout << '"' << key << "\": \""
-                  << hashMap_.read(key).value_or("no value") << '"'
-                  << std::endl;
+        hashMap_.read(key);
+        // std::cout << '"' << key << "\": \""
+        //           << hashMap_.read(key).value_or("no value") << '"'
+        //           << std::endl;
       });
       break;
     case Command::STAT: {

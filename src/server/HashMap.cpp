@@ -32,7 +32,7 @@ std::optional<std::string> HashMap::read(std::string_view key) const {
   const auto keyHash = calcHash(key);
   const auto bucketNum = bucket(keyHash);
   {
-    std::unique_lock lock{mutexes_[bucketNum]};
+    std::shared_lock lock{mutexes_[bucketNum]};
     it = hashTable_.at(bucketNum).begin();
     end = hashTable_.at(bucketNum).end();
   }
