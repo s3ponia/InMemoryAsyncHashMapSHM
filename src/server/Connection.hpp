@@ -16,6 +16,8 @@ public:
   Connection(SharedMemoryBuff &shm_buffer, HashMap &hashMap,
              ThreadPool &threadPool)
       : shm_buffer_(shm_buffer), hashMap_(hashMap), threadPool_(threadPool),
+        input_(shm_buffer.requests_list.data(),
+               shm_buffer.requests_list.size()),
         output_(shm_buffer.reponses_list.data(),
                 shm_buffer.reponses_list.size()) {
     if ((sem_req_ = sem_open(semReqNameFromOffset(shm_buffer.offset).c_str(),
@@ -41,28 +43,7 @@ public:
   std::size_t buffOffset();
 
 private:
-  struct Command {
-    enum { INSERT, READ, DELETE } type;
-    std::string key;
-    std::string value;
-  };
-
-  void incCursor(int incVal = 1);
-
-  int readInt();
-
-  std::string readString(std::size_t sz);
-
-  Command parseInsert();
-  Command parseRead();
-  Command parseDelete();
-
-  void writeStat(std::chrono::steady_clock::time_point begin,
-                 std::chrono::steady_clock::time_point end);
-
   std::optional<Command> parseNextCommand();
-
-  std::size_t cursor_{};
 
   sem_t *sem_req_;
   sem_t *sem_resp_;
@@ -74,5 +55,6 @@ private:
   HashMap &hashMap_;
   ThreadPool &threadPool_;
 
+  CyclicBufferShm input_;
   CyclicBufferShm output_;
 };

@@ -21,6 +21,102 @@ void CyclicBufferShm::writeReadEmptyResponse(std::string_view key) {
   writeData(key);
 }
 
+void CyclicBufferShm::incBegin(int incVal) {
+  begin_ = (begin_ + incVal) % buffer_size_;
+}
+
+int CyclicBufferShm::readInt() {
+  std::string intStr{};
+  while ('0' <= buffer_[begin_] && buffer_[begin_] <= '9') {
+    intStr += buffer_[begin_];
+    incBegin();
+  }
+
+  if (intStr.empty()) {
+    throw std::invalid_argument{"error in parsing int"};
+  }
+
+  return std::stoi(intStr);
+}
+
+std::string CyclicBufferShm::readString(std::size_t sz) {
+  if (begin_ + sz < buffer_size_) {
+    const auto res = std::string{buffer_ + begin_, sz};
+    begin_ += sz;
+    return res;
+  } else {
+    std::string res{};
+    const auto svCursor = begin_;
+    res += std::string{buffer_ + begin_, sz};
+    incBegin(sz);
+    if (svCursor < begin_) {
+      throw std::out_of_range{"too large string"};
+    }
+    res += std::string{buffer_, begin_};
+    return res;
+  }
+}
+
+// format: I(keySize):(valueSize):(keyString)(ValueString)
+auto CyclicBufferShm::parseInsert() -> Command {
+  assert(buffer_[begin_] == 'I');
+  incBegin();
+
+  const auto keySize = readInt();
+  assert(buffer_[begin_] == ':');
+  incBegin();
+
+  const auto valueSize = readInt();
+  assert(buffer_[begin_] == ':');
+  incBegin();
+
+  auto keyString = readString(keySize);
+  auto valueString = readString(valueSize);
+
+  return Command{Command::INSERT, std::move(keyString), std::move(valueString)};
+}
+
+// format: R(keySize):(keyString)
+auto CyclicBufferShm::parseRead() -> Command {
+  assert(buffer_[begin_] == 'R');
+  incBegin();
+
+  const auto keySize = readInt();
+  assert(buffer_[begin_] == ':');
+  incBegin();
+
+  auto keyString = readString(keySize);
+
+  return Command{Command::READ, std::move(keyString), {}};
+}
+
+// format: D(keySize):(keyString)
+auto CyclicBufferShm::parseDelete() -> Command {
+  assert(buffer_[begin_] == 'D');
+  incBegin();
+
+  const auto keySize = readInt();
+  assert(buffer_[begin_] == ':');
+  incBegin();
+
+  auto keyString = readString(keySize);
+
+  return Command{Command::DELETE, std::move(keyString), {}};
+}
+
+auto CyclicBufferShm::parseNextCommandFromBegin() -> std::optional<Command> {
+  switch (buffer_[begin_]) {
+  case 'I':
+    return parseInsert();
+  case 'D':
+    return parseDelete();
+  case 'R':
+    return parseRead();
+  }
+  throw std::runtime_error{std::string{"Unhandled Command type: "} +
+                           buffer_[begin_]};
+}
+
 void CyclicBufferShm::writeReadResponse(std::string_view key,
                                         std::string_view value) {
   const auto keySize = std::to_string(key.size());
