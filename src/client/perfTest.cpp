@@ -15,7 +15,7 @@
 #include "utility/constants.hpp"
 
 #include "Client.hpp"
-#include "CyclicBufferShm.hpp"
+#include "utility/CyclicBufferShm.hpp"
 
 int initShm() {
   if (int shm = shm_open(SHARED_MEMORY_OBJECT_NAME, O_RDWR, 0777); shm != -1) {
@@ -52,7 +52,6 @@ void testInsertPerformance(Client &client, int insertCounts) {
   }
 
   std::cout << insertCounts << " inserts" << std::endl;
-  client.stat();
 }
 
 void testReadPerformance(Client &client, int insertCounts) {
@@ -60,7 +59,6 @@ void testReadPerformance(Client &client, int insertCounts) {
     client.read(random_string(5));
   }
   std::cout << insertCounts << " reads" << std::endl;
-  client.stat();
 }
 
 void testDeletePerformance(Client &client, int insertCounts) {
@@ -68,7 +66,6 @@ void testDeletePerformance(Client &client, int insertCounts) {
     client.erase(random_string(5));
   }
   std::cout << insertCounts << " deletes" << std::endl;
-  client.stat();
 }
 
 int main() {
@@ -90,7 +87,6 @@ int main() {
     testInsertPerformance(client, operationsNumber);
     testDeletePerformance(client, operationsNumber);
     testReadPerformance(client, operationsNumber);
-    client.exit();
   } else {
     exit(EXIT_FAILURE);
   }

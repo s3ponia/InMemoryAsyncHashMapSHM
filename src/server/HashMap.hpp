@@ -15,7 +15,7 @@ public:
 
   void erase(std::string_view key, std::size_t op_cnt);
   void put(std::string_view key, std::string_view value, std::size_t op_cnt);
-  std::optional<std::string> read(std::string_view key) const;
+  std::optional<std::string_view> read(std::string_view key) const;
 
 private:
   struct Value {

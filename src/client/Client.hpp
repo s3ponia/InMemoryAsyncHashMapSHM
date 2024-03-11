@@ -4,7 +4,7 @@
 
 #include <string_view>
 
-#include "CyclicBufferShm.hpp"
+#include "utility/CyclicBufferShm.hpp"
 
 class Client {
 public:
@@ -14,12 +14,8 @@ public:
   void insert(std::string_view key, std::string_view value);
   void erase(std::string_view key);
   void read(std::string_view key);
-  void exit();
-  void stat();
 
 private:
-  void writeString(std::string_view val);
-
   std::size_t stringSize(std::size_t number);
 
   std::size_t dataSize() const;

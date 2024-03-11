@@ -12,7 +12,7 @@
 #include "utility/constants.hpp"
 
 #include "Client.hpp"
-#include "CyclicBufferShm.hpp"
+#include "utility/CyclicBufferShm.hpp"
 
 int initShm() {
   if (int shm = shm_open(SHARED_MEMORY_OBJECT_NAME, O_RDWR, 0777); shm != -1) {
@@ -31,7 +31,7 @@ std::string readStr(std::string line) {
 }
 
 int main() {
-  sem_t *semaphore = sem_open(SEM_NAME, O_RDWR, SEM_PERMS, 0);
+  sem_t *semaphore = sem_open(SEM_NAME, O_RDWR);
   if (semaphore == SEM_FAILED) {
     perror("sem_open(3) failed");
     exit(EXIT_FAILURE);
@@ -59,9 +59,6 @@ int main() {
         } else if (command == "delete") {
           const auto key = readStr("Enter key: ");
           client.erase(key);
-        } else if (command == "exit") {
-          client.exit();
-          return 0;
         } else {
           std::cerr << "invalid operation: " << command << std::endl;
         }

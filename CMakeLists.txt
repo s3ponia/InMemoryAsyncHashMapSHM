@@ -13,9 +13,9 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 include_directories(src)
 
-set(SERVER_SOURCE_FILES src/server/main.cpp src/server/HashMap.cpp src/server/Server.cpp src/server/ThreadPool.cpp)
+set(SERVER_SOURCE_FILES src/server/main.cpp src/utility/CyclicBufferShm.cpp src/server/HashMap.cpp src/server/Server.cpp src/server/ThreadPool.cpp src/server/Connection.cpp)
 
-set(CLIENT_SOURCE_FILES  src/client/Client.cpp src/client/CyclicBufferShm.cpp)
+set(CLIENT_SOURCE_FILES  src/client/Client.cpp src/utility/CyclicBufferShm.cpp)
 
 add_executable(server ${SERVER_SOURCE_FILES})
 

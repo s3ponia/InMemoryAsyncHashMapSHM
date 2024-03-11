@@ -3,10 +3,18 @@
 #include <cstddef>
 #include <string_view>
 
+#include "utility/SharedMemoryBuff.hpp"
+
 class CyclicBufferShm {
 public:
   CyclicBufferShm(char *buffer, std::size_t buffer_size)
       : buffer_(buffer), buffer_size_(buffer_size) {}
+
+  void writeReadEmptyResponse(std::string_view key);
+  void writeReadResponse(std::string_view key, std::string_view value);
+  void writeInsert(std::string_view key, std::string_view value);
+  void writeErase(std::string_view key);
+  void writeRead(std::string_view key);
 
   void writeData(std::string_view data);
 

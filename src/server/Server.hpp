@@ -1,52 +1,45 @@
 #pragma once
 
 #include <chrono>
+#include <memory>
 #include <semaphore.h>
 #include <string_view>
 
+#include "Connection.hpp"
 #include "HashMap.hpp"
 #include "ThreadPool.hpp"
 
 class Server {
 public:
-  Server(std::string_view shared_memory, sem_t *semaphore,
-         std::size_t hashMapSize)
-      : shared_memory_(shared_memory), semaphore_(semaphore),
-        hashMap_(hashMapSize) {}
+  Server(char *shared_memory, sem_t *conn_semaphore_req,
+         sem_t *conn_semaphore_resp, std::size_t hashMapSize)
+      : shared_memory_(shared_memory), conn_semaphore_req_(conn_semaphore_req),
+        conn_semaphore_resp_(conn_semaphore_resp), hashMap_(hashMapSize) {
+    fillOffsets();
+  }
 
   void run();
 
 private:
-  struct Command {
-    enum { INSERT, READ, DELETE, STAT, EXIT } type;
-    std::string key;
-    std::string value;
-  };
+  void runConnection(std::shared_ptr<Connection> conn);
+  void pingConnections();
 
-  void incCursor(int incVal = 1);
+  void fillOffsets();
 
-  int readInt();
+  std::optional<std::shared_ptr<Connection>> waitConnection();
+  void writeOffset(std::size_t off);
 
-  std::string readString(std::size_t sz);
+  std::shared_ptr<Connection> initConnectionInShm(std::size_t off);
 
-  Command parseInsert();
-  Command parseRead();
-  Command parseDelete();
-  Command parseExit();
-  Command parseStat();
+  char *shared_memory_;
+  std::size_t shared_memory_size_;
 
-  void writeStat(std::chrono::steady_clock::time_point begin,
-                 std::chrono::steady_clock::time_point end);
+  sem_t *conn_semaphore_req_;
+  sem_t *conn_semaphore_resp_;
 
-  Command parseNextCommand();
+  std::list<std::shared_ptr<Connection>> connections_;
+  std::vector<std::size_t> free_offsets_;
 
-  std::size_t operation_counter_{};
-
-  std::size_t cursor_{};
-  std::string_view shared_memory_;
-  sem_t *semaphore_;
-
-  std::chrono::milliseconds waiting_time_{};
   HashMap hashMap_;
   ThreadPool threadPool_;
 };

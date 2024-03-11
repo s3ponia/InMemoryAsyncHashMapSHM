@@ -26,7 +26,7 @@ void HashMap::put(std::string_view key, std::string_view value,
   }
 }
 
-std::optional<std::string> HashMap::read(std::string_view key) const {
+std::optional<std::string_view> HashMap::read(std::string_view key) const {
   ListType::const_iterator it{};
   ListType::const_iterator end{};
   const auto keyHash = calcHash(key);
@@ -48,11 +48,7 @@ std::optional<std::string> HashMap::read(std::string_view key) const {
     }
   }
 
-  if (data.has_value()) {
-    return std::string{*data};
-  } else {
-    return std::nullopt;
-  }
+  return data;
 }
 
 std::size_t HashMap::calcHash(std::string_view key) const {

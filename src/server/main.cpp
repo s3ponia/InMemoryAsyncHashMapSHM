@@ -63,8 +63,8 @@ int main(int argc, char **argv) {
     char *addr = (char *)mmap(0, SHARED_MEMORY_OBJECT_SIZE + 1, PROT_READ,
                               MAP_SHARED, shm, 0);
     std::string_view shared_memory(addr, SHARED_MEMORY_OBJECT_SIZE);
-    Server server{shared_memory, semaphore, hashMapSize};
-    server.run();
+    // Server server{shared_memory, semaphore, hashMapSize};
+    // server.run();
   } else {
     exit(EXIT_FAILURE);
   }

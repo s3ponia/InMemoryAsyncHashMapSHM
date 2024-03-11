@@ -3,6 +3,7 @@
 #include <condition_variable>
 #include <functional>
 #include <future>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -14,8 +15,11 @@ class ThreadPool {
 public:
   ThreadPool(size_t = std::thread::hardware_concurrency());
   template <class F, class... Args> auto submitTask(F &&f, Args &&...args);
+  template <class F, class... Args> auto repeatedTask(F &&f, Args &&...args);
+
   void shutdown();
   void restore();
+
   ~ThreadPool();
 
 private:
@@ -47,7 +51,11 @@ inline ThreadPool::ThreadPool(size_t threads) : stop(false) {
           this->tasks.pop();
         }
 
-        task();
+        try {
+          task();
+        } catch (const std::exception &e) {
+          std::cerr << "exception in thread pool: " << e.what() << std::endl;
+        }
       }
     });
 }
