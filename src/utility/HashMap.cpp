@@ -1,5 +1,7 @@
 #include "HashMap.hpp"
 
+#include <thread>
+
 void HashMap::erase(std::string_view key, std::size_t op_cnt) {
   const auto keyHash = calcHash(key);
   const auto bucketNum = bucket(keyHash);

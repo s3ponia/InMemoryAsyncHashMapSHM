@@ -10,9 +10,9 @@
 const auto SEM_PERMS = (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 
 const auto SHARED_MEMORY_OBJECT_NAME = "ShmHashMap";
+const auto SHM_MAX_CONNECTIONS = std::thread::hardware_concurrency();
 const auto SHARED_MEMORY_OBJECT_SIZE =
-    sizeof(std::size_t) +
-    sizeof(SharedMemoryBuff) * std::thread::hardware_concurrency();
+    sizeof(std::size_t) + sizeof(SharedMemoryBuff) * SHM_MAX_CONNECTIONS;
 
 inline sem_t *connSemaphoreReq(int flags = 0) {
   if (auto sem =

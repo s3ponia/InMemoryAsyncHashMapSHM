@@ -22,6 +22,7 @@ public:
   bool ping();
   void waitPing();
 
+  void openSemaphores();
   void unlinkSemaphores();
 
   std::size_t buffOffset();

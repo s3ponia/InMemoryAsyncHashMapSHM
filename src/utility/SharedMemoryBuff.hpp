@@ -5,7 +5,7 @@
 #include <array>
 #include <string>
 
-const auto SHARED_MEMORY_BUFF_SIZE = 10;
+const auto SHARED_MEMORY_BUFF_SIZE = 1 << 30;
 
 struct SharedMemoryBuff {
   std::array<char, SHARED_MEMORY_BUFF_SIZE> requests_list;
@@ -13,11 +13,11 @@ struct SharedMemoryBuff {
 };
 
 inline std::string semReqNameFromOffset(std::size_t offset) {
-  return std::string{"semConnReq"} + std::to_string(offset);
+  return std::string{"semShmReq"} + std::to_string(offset);
 }
 
 inline std::string semRespNameFromOffset(std::size_t offset) {
-  return std::string{"semConnResp"} + std::to_string(offset);
+  return std::string{"semShmResp"} + std::to_string(offset);
 }
 
 inline std::string semPingNameFromOffset(std::size_t offset) {

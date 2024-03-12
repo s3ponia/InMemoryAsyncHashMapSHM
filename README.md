@@ -49,45 +49,27 @@ buffer (POSIX shm)
 # Server
 `./server <number of buckets in hash table>`
 
-Prints on read request mapped value of the requested element or "no value" if there is no value with that key
+<img width="638" alt="image" src="https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/70487966-b9cd-4b19-800c-bb8cc0474def">
 
-<img width="635" alt="image" src="https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/babb3633-2f16-4220-9125-2dcfa55b20b5">
 
 # Client
 `./client`
 
-`exit` request also closes server
+<img width="680" alt="image" src="https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/f25d6a37-48f7-4a24-a632-57227f355036">
 
-<img width="557" alt="image" src="https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/46884511-7977-4fbd-acbc-964d98d4463f">
 
 # Performance Test
 
-Test contains 3 steps:
-1. 1'000'000 inserts
-2. 1'000'000 deletes
-3. 1'000'000 reads
+`./perf_test_client (number_of_clients) (number_of_overall_requests)`
+
+Output: `(id_of_client): (number_of_ops | time) (reads|inserts|deletes|ms)`
+-1: overall time
 
 ## Results:
-with 127 buckets:
-1. took 1773 ms
-2. took 1341 ms
-3. took 252436 ms (~250 sec)
-<img width="632" alt="image" src="https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/d42d11be-919b-4fdf-b700-56157ed31c34">
-
-
-with 1021 buckets:
-1. took 1792 ms
-2. took 1355 ms
-3. took 32233 ms (~32 sec)
-
-<img width="627" alt="image" src="https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/b5523312-3323-468b-8796-0c701ee85be2">
-
-with 3571 buckets:
-1. took 1805 ms
-2. took 1215 ms
-3. took 9171 ms (~9 sec)
-
-<img width="651" alt="image" src="https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/3a77bb5c-4c1c-4139-a454-a3429dce3b89">
+![telegram-cloud-photo-size-2-5440435529565984512-y](https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/0471a283-4213-4469-becb-b9fcd5657af7)
+![telegram-cloud-photo-size-2-5440435529565984513-y](https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/ffe682b0-b71a-413e-9e44-3133c2788ca3)
+![telegram-cloud-photo-size-2-5440435529565984514-y](https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/cd1d7a1e-6e85-4985-ae1b-0fda2c3deb71)
+![telegram-cloud-photo-size-2-5440435529565984515-y](https://github.com/s3ponia/InMemoryAsyncHashMapSHM/assets/29208820/acdb9943-17a3-4c15-b010-eea06f4f3296)
 
 
 

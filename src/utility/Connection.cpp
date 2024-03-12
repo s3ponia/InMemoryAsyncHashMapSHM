@@ -12,6 +12,10 @@ Connection::Connection(std::size_t offset, SharedMemoryBuff &shm_buffer)
                     shm_buffer.requests_list.size()),
       responses_shm_(shm_buffer.reponses_list.data(),
                      shm_buffer.reponses_list.size()) {
+  openSemaphores();
+}
+
+void Connection::openSemaphores() {
   if ((sem_req_ = sem_open(semReqNameFromOffset(offset_).c_str(),
                            O_RDWR | O_CREAT, SEM_PERMS, 0)) == SEM_FAILED) {
     throw std::runtime_error{std::strerror(errno)};

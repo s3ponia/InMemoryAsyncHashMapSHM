@@ -2,9 +2,11 @@
 
 ServerConnection::ServerConnection(std::size_t offset,
                                    SharedMemoryBuff &shm_buffer,
-                                   HashMap &hashMap, ThreadPool &threadPool)
-    : Connection(offset, shm_buffer), hashMap_(hashMap),
-      threadPool_(threadPool) {}
+                                   HashMap &hashMap)
+    : Connection(offset, shm_buffer), hashMap_(hashMap) {
+  unlinkSemaphores();
+  openSemaphores();
+}
 
 bool ServerConnection::handleCommand() {
   auto nextCommand = parseNextCommand();
@@ -13,53 +15,49 @@ bool ServerConnection::handleCommand() {
   }
 
   switch (nextCommand->type) {
-  case Command::INSERT:
-    threadPool_.submitTask([this, key = std::string{nextCommand->key},
-                            value = std::string{nextCommand->value},
-                            reqId = nextCommand->id,
-                            op_cnt = static_cast<std::size_t>(time(NULL))] {
-      hashMap_.put(key, value, op_cnt);
-      {
-        std::unique_lock lock{output_mutex_};
-        responses_shm_.writeInsert(reqId, key, value);
-        responses_shm_.parseResponseFromBegin();
+  case Command::INSERT: {
+    const auto op_cnt = static_cast<std::size_t>(time(NULL));
+    hashMap_.put(nextCommand->key, nextCommand->value, op_cnt);
+    {
+      std::unique_lock lock{output_mutex_};
+      responses_shm_.writeInsert(nextCommand->id, nextCommand->key,
+                                 nextCommand->value);
+      responses_shm_.parseResponseFromBegin();
+    }
+    sem_post(sem_resp_);
+    break;
+  }
+  case Command::DELETE: {
+    const auto op_cnt = static_cast<std::size_t>(time(NULL));
+    hashMap_.erase(nextCommand->key, op_cnt);
+
+    {
+      std::unique_lock lock{output_mutex_};
+      responses_shm_.writeErase(nextCommand->id, nextCommand->key);
+      responses_shm_.parseResponseFromBegin();
+    }
+    sem_post(sem_resp_);
+    break;
+  }
+  case Command::READ: {
+    const auto value = hashMap_.read(nextCommand->key);
+
+    {
+      std::unique_lock lock{output_mutex_};
+
+      if (value.has_value()) {
+        responses_shm_.writeReadResponse(nextCommand->id, nextCommand->key,
+                                         *value);
+      } else {
+        responses_shm_.writeReadEmptyResponse(nextCommand->id,
+                                              nextCommand->key);
       }
-      sem_post(sem_resp_);
-    });
+      responses_shm_.parseResponseFromBegin();
+    }
+
+    sem_post(sem_resp_);
     break;
-  case Command::DELETE:
-    threadPool_.submitTask([this, key = std::string{nextCommand->key},
-                            reqId = nextCommand->id,
-                            op_cnt = static_cast<std::size_t>(time(NULL))] {
-      hashMap_.erase(key, op_cnt);
-
-      {
-        std::unique_lock lock{output_mutex_};
-        responses_shm_.writeErase(reqId, key);
-        responses_shm_.parseResponseFromBegin();
-      }
-      sem_post(sem_resp_);
-    });
-    break;
-  case Command::READ:
-    threadPool_.submitTask(
-        [this, key = std::string{nextCommand->key}, reqId = nextCommand->id] {
-          const auto value = hashMap_.read(key);
-
-          {
-            std::unique_lock lock{output_mutex_};
-
-            if (value.has_value()) {
-              responses_shm_.writeReadResponse(reqId, key, *value);
-            } else {
-              responses_shm_.writeReadEmptyResponse(reqId, key);
-            }
-            responses_shm_.parseResponseFromBegin();
-          }
-
-          sem_post(sem_resp_);
-        });
-    break;
+  }
   default:
     break;
   }

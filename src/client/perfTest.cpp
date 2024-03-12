@@ -12,6 +12,8 @@
 #include <string_view>
 #include <thread>
 
+#include "utility/ClientConnection.hpp"
+#include "utility/ThreadPool.hpp"
 #include "utility/constants.hpp"
 
 #include "Client.hpp"
@@ -46,47 +48,108 @@ std::string random_string(size_t length) {
   return str;
 }
 
-void testInsertPerformance(Client &client, int insertCounts) {
+void testInsertPerformance(ClientConnection &client, int insertCounts, int id) {
+  std::vector<std::future<void>> futures;
   for (int i = 0; i < insertCounts; ++i) {
-    // client.insert(random_string(5), random_string(5));
+    futures.push_back(client.insert(random_string(5), random_string(5)));
+  }
+  for (auto &f : futures) {
+    f.get();
   }
 
-  std::cout << insertCounts << " inserts" << std::endl;
+  std::cout << std::to_string(id) + ": " + std::to_string(insertCounts) +
+                   " inserts\n";
 }
 
-void testReadPerformance(Client &client, int insertCounts) {
-  for (int i = 0; i < insertCounts; ++i) {
-    // client.read(random_string(5));
+void testReadPerformance(ClientConnection &client, int readCounts, int id) {
+  std::vector<std::future<std::optional<std::string>>> futures;
+  for (int i = 0; i < readCounts; ++i) {
+    futures.push_back(client.read(random_string(5)));
   }
-  std::cout << insertCounts << " reads" << std::endl;
+  for (auto &f : futures) {
+    f.get();
+  }
+  std::cout << std::to_string(id) + ": " + std::to_string(readCounts) +
+                   " reads\n";
 }
 
-void testDeletePerformance(Client &client, int insertCounts) {
+void testDeletePerformance(ClientConnection &client, int insertCounts, int id) {
+  std::vector<std::future<void>> futures;
   for (int i = 0; i < insertCounts; ++i) {
-    // client.erase(random_string(5));
+    futures.push_back(client.erase(random_string(5)));
   }
-  std::cout << insertCounts << " deletes" << std::endl;
+  for (auto &f : futures) {
+    f.get();
+  }
+  std::cout << std::to_string(id) + ": " + std::to_string(insertCounts) +
+                   " deletes\n";
 }
 
-int main() {
-  sem_t *semaphore = sem_open(SEM_NAME, O_RDWR, SEM_PERMS, 0);
-  if (semaphore == SEM_FAILED) {
-    perror("sem_open(3) failed");
-    exit(EXIT_FAILURE);
+template <class F> void measureTime(F &&f, int id) {
+  auto t1 = std::chrono::high_resolution_clock::now();
+  f();
+  auto t2 = std::chrono::high_resolution_clock::now();
+
+  /* Getting number of milliseconds as a double. */
+  std::chrono::duration<double, std::milli> ms_double = t2 - t1;
+
+  std::cout << std::to_string(id) + ": " + std::to_string(ms_double.count()) +
+                   "ms\n";
+}
+
+int main(int argc, char **argv) {
+  if (argc != 3) {
+    std::cerr << "usage: " << argv[0] << " (clients_count) (operations_count)"
+              << std::endl;
+    return -1;
   }
+
+  const auto clients_count = std::stoi(argv[1]);
+  const auto operations_count = std::stoi(argv[2]);
 
   if (auto shm = initShm(); shm != -1) {
     char *addr = (char *)mmap(0, SHARED_MEMORY_OBJECT_SIZE + 1,
                               PROT_WRITE | PROT_READ, MAP_SHARED, shm, 0);
 
-    CyclicBufferShm shared_memory{addr, SHARED_MEMORY_OBJECT_SIZE};
-    // Client client{shared_memory, semaphore};
+    Client client{addr};
 
-    const auto operationsNumber = 1'000'000;
+    const auto operationsNumber = operations_count / clients_count;
 
-    // testInsertPerformance(client, operationsNumber);
-    // testDeletePerformance(client, operationsNumber);
-    // testReadPerformance(client, operationsNumber);
+    std::vector<std::shared_ptr<ClientConnection>> connections(clients_count);
+    std::vector<std::thread> threads;
+    threads.reserve(clients_count);
+
+    for (int i = 0; i < clients_count; ++i) {
+      auto conn = client.connect().value();
+      connections[i] = conn;
+    }
+    measureTime(
+        [&] {
+          for (int i = 0; i < clients_count; ++i) {
+            const auto &conn = connections[i];
+            threads.emplace_back([conn, operationsNumber, id = i] {
+              measureTime(
+                  [conn, operationsNumber, id] {
+                    testInsertPerformance(*conn, operationsNumber, id);
+                  },
+                  id);
+              measureTime(
+                  [conn, operationsNumber, id] {
+                    testDeletePerformance(*conn, operationsNumber, id);
+                  },
+                  id);
+              measureTime(
+                  [conn, operationsNumber, id] {
+                    testReadPerformance(*conn, operationsNumber, id);
+                  },
+                  id);
+            });
+          }
+          for (auto &t : threads) {
+            t.join();
+          }
+        },
+        -1);
   } else {
     exit(EXIT_FAILURE);
   }

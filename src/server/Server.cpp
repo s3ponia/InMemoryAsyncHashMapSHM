@@ -56,7 +56,7 @@ std::shared_ptr<ServerConnection>
 Server::initServerConnectionInShm(std::size_t off) {
   SharedMemoryBuff *buff = new (shared_memory_ + off) SharedMemoryBuff{};
 
-  return std::make_shared<ServerConnection>(off, *buff, hashMap_, threadPool_);
+  return std::make_shared<ServerConnection>(off, *buff, hashMap_);
 }
 
 std::optional<std::shared_ptr<ServerConnection>>

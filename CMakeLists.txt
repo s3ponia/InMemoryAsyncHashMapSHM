@@ -23,4 +23,4 @@ add_executable(server ${SERVER_SOURCE_FILES} ${UTILITY_SOUCE_FILES})
 
 add_executable(client ${CLIENT_SOURCE_FILES} ${UTILITY_SOUCE_FILES} src/client/main.cpp)
 
-# add_executable(perf_test_client ${CLIENT_SOURCE_FILES} ${UTILITY_SOUCE_FILES} src/client/perfTest.cpp)
+add_executable(perf_test_client ${CLIENT_SOURCE_FILES} ${UTILITY_SOUCE_FILES} src/client/perfTest.cpp)
