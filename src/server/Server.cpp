@@ -27,7 +27,7 @@ void Server::pingServerConnections() {
 
 void Server::run() {
   while (true) {
-    pingServerConnections();
+//    pingServerConnections();
     const auto conn = waitServerConnection();
     if (conn.has_value()) {
       std::clog << "Established connection with offset "

@@ -3,6 +3,7 @@
 #include <cassert>
 #include <iostream>
 #include <thread>
+#include <cstring>
 
 #include "utility/constants.hpp"
 
@@ -72,7 +73,7 @@ bool Connection::ping() {
     if (errno != EAGAIN) {
       return true;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
   return false;
 }

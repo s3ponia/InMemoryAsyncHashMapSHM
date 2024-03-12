@@ -5,7 +5,7 @@
 #include <array>
 #include <string>
 
-const auto SHARED_MEMORY_BUFF_SIZE = 1 << 30;
+const auto SHARED_MEMORY_BUFF_SIZE = 5 << 20;
 
 struct SharedMemoryBuff {
   std::array<char, SHARED_MEMORY_BUFF_SIZE> requests_list;

@@ -1,5 +1,7 @@
 #include "Client.hpp"
 
+#include <cstring>
+
 Client::Client(char *shared_memory)
     : shared_memory_(shared_memory), conn_semaphore_req_(connSemaphoreReq()),
       conn_semaphore_resp_(connSemaphoreResp()),
