@@ -42,13 +42,11 @@ void Server::run() {
 }
 
 void Server::writeOffset(std::size_t off) {
-  std::memcpy(shared_memory_ + shared_memory_size_ - sizeof(off), &off,
-              sizeof(off));
+  std::memcpy(shared_memory_, &off, sizeof(off));
 }
 
 void Server::fillOffsets() {
-  for (std::size_t offset = 0;
-       offset < shared_memory_size_ - sizeof(std::size_t);
+  for (std::size_t offset = sizeof(std::size_t); offset < shared_memory_size_;
        offset += sizeof(SharedMemoryBuff)) {
     free_offsets_.push_back(offset);
   }
@@ -64,6 +62,7 @@ Server::initServerConnectionInShm(std::size_t off) {
 std::optional<std::shared_ptr<ServerConnection>>
 Server::waitServerConnection() {
   sem_wait(conn_semaphore_req_);
+  std::cout << "Got conn request" << std::endl;
   if (free_offsets_.empty()) {
     writeOffset(-1);
     sem_post(conn_semaphore_resp_);

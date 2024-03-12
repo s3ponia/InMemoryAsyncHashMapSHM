@@ -14,7 +14,7 @@
 
 class Client {
 public:
-  Client(char *shared_memory, std::size_t shared_memory_size);
+  Client(char *shared_memory);
 
   std::optional<std::shared_ptr<ClientConnection>> connect();
 
@@ -23,7 +23,6 @@ public:
 private:
   char *shared_memory_;
 
-  std::size_t *offset_in_shm_;
   sem_t *conn_semaphore_req_;
   sem_t *conn_semaphore_resp_;
   sem_t *conn_semaphore_rcv_;

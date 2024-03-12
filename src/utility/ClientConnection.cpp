@@ -62,6 +62,7 @@ void ClientConnection::readResponses() {
     sem_wait(sem_resp_);
     const auto resp = responses_shm_.parseResponseFromBegin();
     assert(resp.has_value());
+    requests_shm_.parseNextCommandFromBegin();
     {
       std::lock_guard lock{mutex_};
       complete_promises_func_.at(resp->id)(*resp);

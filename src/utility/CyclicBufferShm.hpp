@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstddef>
 #include <optional>
 #include <string_view>
@@ -35,6 +36,7 @@ public:
 
   void writeData(std::string_view data);
 
+  void eraseBeginData(std::size_t sz) noexcept;
   void eraseLastData(std::size_t sz) noexcept;
 
   std::size_t usedSpace() const noexcept;
@@ -62,4 +64,6 @@ private:
 
   std::size_t begin_{};
   std::size_t end_{};
+
+  std::atomic_size_t used_space_{};
 };

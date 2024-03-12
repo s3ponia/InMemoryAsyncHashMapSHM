@@ -22,6 +22,7 @@ bool ServerConnection::handleCommand() {
       {
         std::unique_lock lock{output_mutex_};
         responses_shm_.writeInsert(reqId, key, value);
+        responses_shm_.parseResponseFromBegin();
       }
       sem_post(sem_resp_);
     });
@@ -35,6 +36,7 @@ bool ServerConnection::handleCommand() {
       {
         std::unique_lock lock{output_mutex_};
         responses_shm_.writeErase(reqId, key);
+        responses_shm_.parseResponseFromBegin();
       }
       sem_post(sem_resp_);
     });
@@ -52,6 +54,7 @@ bool ServerConnection::handleCommand() {
             } else {
               responses_shm_.writeReadEmptyResponse(reqId, key);
             }
+            responses_shm_.parseResponseFromBegin();
           }
 
           sem_post(sem_resp_);

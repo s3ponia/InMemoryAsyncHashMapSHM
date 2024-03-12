@@ -1,10 +1,7 @@
 #include "Client.hpp"
 
-Client::Client(char *shared_memory, std::size_t shared_memory_size)
-    : shared_memory_(shared_memory),
-      offset_in_shm_(
-          (size_t *)(shared_memory + shared_memory_size - sizeof(std::size_t))),
-      conn_semaphore_req_(connSemaphoreReq()),
+Client::Client(char *shared_memory)
+    : shared_memory_(shared_memory), conn_semaphore_req_(connSemaphoreReq()),
       conn_semaphore_resp_(connSemaphoreResp()),
       conn_semaphore_rcv_(connSemaphoreRcv()) {}
 
@@ -13,7 +10,8 @@ Client::~Client() { running_ = false; }
 std::optional<std::shared_ptr<ClientConnection>> Client::connect() {
   sem_post(conn_semaphore_req_);
   sem_wait(conn_semaphore_resp_);
-  const auto offset = *offset_in_shm_;
+  std::size_t offset{};
+  std::memcpy(&offset, shared_memory_, sizeof(std::size_t));
   sem_post(conn_semaphore_rcv_);
 
   if (offset == -1) {

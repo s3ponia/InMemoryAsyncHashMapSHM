@@ -5,11 +5,7 @@
 #include <stdexcept>
 
 std::size_t CyclicBufferShm::usedSpace() const noexcept {
-  if (begin_ < end_) {
-    return end_ - begin_;
-  } else {
-    return (buffer_size_ - begin_) + end_;
-  }
+  return used_space_.load(std::memory_order_relaxed);
 }
 
 // format: E(reqId):(keySize):(key)
@@ -27,6 +23,7 @@ void CyclicBufferShm::writeReadEmptyResponse(std::size_t req_id,
 }
 
 void CyclicBufferShm::incBegin(int incVal) {
+  used_space_.fetch_sub(incVal, std::memory_order_relaxed);
   begin_ = (begin_ + incVal) % buffer_size_;
 }
 
@@ -47,7 +44,7 @@ std::size_t CyclicBufferShm::readInt() {
 std::string CyclicBufferShm::readString(std::size_t sz) {
   if (begin_ + sz < buffer_size_) {
     const auto res = std::string{buffer_ + begin_, sz};
-    begin_ += sz;
+    incBegin(sz);
     return res;
   } else {
     std::string res{};
@@ -259,16 +256,25 @@ std::size_t CyclicBufferShm::freeSpace() const noexcept {
 }
 
 void CyclicBufferShm::incEnd(std::size_t val) {
+  used_space_.fetch_add(val, std::memory_order_relaxed);
+
   end_ = (end_ + val) % buffer_size_;
 }
 
 void CyclicBufferShm::decEnd(std::size_t val) {
+  used_space_.fetch_sub(val, std::memory_order_relaxed);
+
   if (end_ > val) {
     end_ -= val;
   } else {
     val -= end_;
     end_ = buffer_size_ - val;
   }
+}
+
+void CyclicBufferShm::eraseBeginData(std::size_t sz) noexcept {
+  assert(sz < usedSpace());
+  incBegin(sz);
 }
 
 void CyclicBufferShm::eraseLastData(std::size_t sz) noexcept {

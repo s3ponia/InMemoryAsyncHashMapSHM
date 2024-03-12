@@ -15,9 +15,9 @@ public:
   Server(char *shared_memory, std::size_t shared_memory_size,
          std::size_t hashMapSize)
       : shared_memory_(shared_memory), shared_memory_size_(shared_memory_size),
-        conn_semaphore_req_(connSemaphoreReq()),
-        conn_semaphore_resp_(connSemaphoreResp()),
-        conn_semaphore_rcv_(connSemaphoreRcv()), hashMap_(hashMapSize) {
+        conn_semaphore_req_(connSemaphoreReq(O_EXCL)),
+        conn_semaphore_resp_(connSemaphoreResp(O_EXCL)),
+        conn_semaphore_rcv_(connSemaphoreRcv(O_EXCL)), hashMap_(hashMapSize) {
     fillOffsets();
   }
 

@@ -29,10 +29,14 @@ int initShm() {
 }
 
 void unlinkShm() { shm_unlink(SHARED_MEMORY_OBJECT_NAME); }
-void unlinkSem() { sem_unlink(SEM_NAME); }
+void unlinkSem() {
+  sem_unlink("connSemaphoreReq");
+  sem_unlink("connSemaphoreResp");
+  sem_unlink("connSemaphoreRcv");
+}
 void atExit() {
-  unlinkSem();
   unlinkShm();
+  unlinkSem();
 }
 void terminateHandle(int) {
   atExit();
@@ -56,13 +60,6 @@ int main(int argc, char **argv) {
 
   std::atexit(atExit);
   signal(SIGINT, terminateHandle);
-
-  sem_t *semaphore = sem_open(SEM_NAME, O_CREAT | O_RDWR, SEM_PERMS, 0);
-
-  if (semaphore == SEM_FAILED) {
-    perror("sem_open(3) error");
-    exit(EXIT_FAILURE);
-  }
 
   if (auto shm = initShm(); shm != -1) {
     char *addr = (char *)mmap(0, SHARED_MEMORY_OBJECT_SIZE + 1,
