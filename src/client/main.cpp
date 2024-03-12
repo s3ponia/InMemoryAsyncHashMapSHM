@@ -47,18 +47,19 @@ int main() {
     while (true) {
       try {
         const std::string command =
-            readStr("Enter operation: read|insert|delete|exit: ");
+            readStr("Enter operation: read|insert|delete: ");
 
         if (command == "read") {
           const auto key = readStr("Enter key: ");
-          conn.read(key);
+          std::cout << "Read value: "
+                    << conn->read(key).get().value_or("not found") << std::endl;
         } else if (command == "insert") {
           const auto key = readStr("Enter key: ");
           const auto val = readStr("Enter value: ");
-          conn.insert(key, val);
+          conn->insert(key, val);
         } else if (command == "delete") {
           const auto key = readStr("Enter key: ");
-          conn.erase(key);
+          conn->erase(key);
         } else {
           std::cerr << "invalid operation: " << command << std::endl;
         }

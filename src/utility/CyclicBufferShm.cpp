@@ -12,10 +12,15 @@ std::size_t CyclicBufferShm::usedSpace() const noexcept {
   }
 }
 
-void CyclicBufferShm::writeReadEmptyResponse(std::string_view key) {
+// format: E(reqId):(keySize):(key)
+void CyclicBufferShm::writeReadEmptyResponse(std::size_t req_id,
+                                             std::string_view key) {
+  const auto keyIdStr = std::to_string(req_id);
   const auto keySize = std::to_string(key.size());
 
   writeData("E");
+  writeData(keyIdStr);
+  writeData(":");
   writeData(keySize);
   writeData(":");
   writeData(key);
@@ -25,7 +30,7 @@ void CyclicBufferShm::incBegin(int incVal) {
   begin_ = (begin_ + incVal) % buffer_size_;
 }
 
-int CyclicBufferShm::readInt() {
+std::size_t CyclicBufferShm::readInt() {
   std::string intStr{};
   while ('0' <= buffer_[begin_] && buffer_[begin_] <= '9') {
     intStr += buffer_[begin_];
@@ -36,7 +41,7 @@ int CyclicBufferShm::readInt() {
     throw std::invalid_argument{"error in parsing int"};
   }
 
-  return std::stoi(intStr);
+  return std::stoull(intStr);
 }
 
 std::string CyclicBufferShm::readString(std::size_t sz) {
@@ -57,9 +62,13 @@ std::string CyclicBufferShm::readString(std::size_t sz) {
   }
 }
 
-// format: I(keySize):(valueSize):(keyString)(ValueString)
+// format: I(reqId):(keySize):(valueSize):(keyString)(ValueString)
 auto CyclicBufferShm::parseInsert() -> Command {
   assert(buffer_[begin_] == 'I');
+  incBegin();
+
+  const auto reqId = readInt();
+  assert(buffer_[begin_] == ':');
   incBegin();
 
   const auto keySize = readInt();
@@ -73,35 +82,101 @@ auto CyclicBufferShm::parseInsert() -> Command {
   auto keyString = readString(keySize);
   auto valueString = readString(valueSize);
 
-  return Command{Command::INSERT, std::move(keyString), std::move(valueString)};
+  return Command{Command::INSERT, reqId, std::move(keyString),
+                 std::move(valueString)};
 }
 
-// format: R(keySize):(keyString)
+// format: R(reqId):(keySize):(keyString)
 auto CyclicBufferShm::parseRead() -> Command {
   assert(buffer_[begin_] == 'R');
   incBegin();
 
+  const auto reqId = readInt();
+  assert(buffer_[begin_] == ':');
+  incBegin();
+
   const auto keySize = readInt();
   assert(buffer_[begin_] == ':');
   incBegin();
 
   auto keyString = readString(keySize);
 
-  return Command{Command::READ, std::move(keyString), {}};
+  return Command{Command::READ, reqId, std::move(keyString), {}};
 }
 
-// format: D(keySize):(keyString)
+// format: D(reqId):(keySize):(keyString)
 auto CyclicBufferShm::parseDelete() -> Command {
   assert(buffer_[begin_] == 'D');
   incBegin();
 
+  const auto reqId = readInt();
+  assert(buffer_[begin_] == ':');
+  incBegin();
+
   const auto keySize = readInt();
   assert(buffer_[begin_] == ':');
   incBegin();
 
   auto keyString = readString(keySize);
 
-  return Command{Command::DELETE, std::move(keyString), {}};
+  return Command{Command::DELETE, reqId, std::move(keyString), {}};
+}
+
+// format: R(reqId):(keySize):(valueSize):(keyString)(value)
+auto CyclicBufferShm::parseReadResponse() -> Command {
+  assert(buffer_[begin_] == 'R');
+  incBegin();
+
+  const auto reqId = readInt();
+  assert(buffer_[begin_] == ':');
+  incBegin();
+
+  const auto keySize = readInt();
+  assert(buffer_[begin_] == ':');
+  incBegin();
+
+  const auto valueSize = readInt();
+  assert(buffer_[begin_] == ':');
+  incBegin();
+
+  auto keyString = readString(keySize);
+  auto valueString = readString(valueSize);
+
+  return Command{Command::READ, reqId, std::move(keyString),
+                 std::move(valueString)};
+}
+
+// format: E(reqId):(keySize):(key)
+Response CyclicBufferShm::parseReadEmpty() {
+  assert(buffer_[begin_] == 'E');
+  incBegin();
+
+  const auto reqId = readInt();
+  assert(buffer_[begin_] == ':');
+  incBegin();
+
+  const auto keySize = readInt();
+  assert(buffer_[begin_] == ':');
+  incBegin();
+
+  auto keyString = readString(keySize);
+
+  return Response{Command::READ_EMPTY, reqId, std::move(keyString), {}};
+}
+
+std::optional<Response> CyclicBufferShm::parseResponseFromBegin() {
+  switch (buffer_[begin_]) {
+  case 'I':
+    return parseInsert();
+  case 'D':
+    return parseDelete();
+  case 'R':
+    return parseReadResponse();
+  case 'E':
+    return parseReadEmpty();
+  }
+  throw std::runtime_error{std::string{"Unhandled Response type: "} +
+                           buffer_[begin_]};
 }
 
 auto CyclicBufferShm::parseNextCommandFromBegin() -> std::optional<Command> {
@@ -117,12 +192,16 @@ auto CyclicBufferShm::parseNextCommandFromBegin() -> std::optional<Command> {
                            buffer_[begin_]};
 }
 
-void CyclicBufferShm::writeReadResponse(std::string_view key,
+// format: R(reqId):(keySize):(valueSize):(key)(value)
+void CyclicBufferShm::writeReadResponse(std::size_t reqId, std::string_view key,
                                         std::string_view value) {
+  const auto keyIdStr = std::to_string(reqId);
   const auto keySize = std::to_string(key.size());
   const auto valueSize = std::to_string(value.size());
 
   writeData("R");
+  writeData(keyIdStr);
+  writeData(":");
   writeData(keySize);
   writeData(":");
   writeData(valueSize);
@@ -131,12 +210,16 @@ void CyclicBufferShm::writeReadResponse(std::string_view key,
   writeData(value);
 }
 
-void CyclicBufferShm::writeInsert(std::string_view key,
+// format: I(reqId):(keySize):(valueSize):(key)(value)
+void CyclicBufferShm::writeInsert(std::size_t reqId, std::string_view key,
                                   std::string_view value) {
+  const auto keyIdStr = std::to_string(reqId);
   const auto keySize = std::to_string(key.size());
   const auto valueSize = std::to_string(value.size());
 
   writeData("I");
+  writeData(keyIdStr);
+  writeData(":");
   writeData(keySize);
   writeData(":");
   writeData(valueSize);
@@ -145,19 +228,27 @@ void CyclicBufferShm::writeInsert(std::string_view key,
   writeData(value);
 }
 
-void CyclicBufferShm::writeErase(std::string_view key) {
+// format: E(reqId):(keySize):(key)
+void CyclicBufferShm::writeErase(std::size_t reqId, std::string_view key) {
+  const auto keyIdStr = std::to_string(reqId);
   const auto keySize = std::to_string(key.size());
 
   writeData("D");
+  writeData(keyIdStr);
+  writeData(":");
   writeData(keySize);
   writeData(":");
   writeData(key);
 }
 
-void CyclicBufferShm::writeRead(std::string_view key) {
+// format: R(reqId):(keySize):(key)
+void CyclicBufferShm::writeRead(std::size_t reqId, std::string_view key) {
+  const auto keyIdStr = std::to_string(reqId);
   const auto keySize = std::to_string(key.size());
 
   writeData("R");
+  writeData(keyIdStr);
+  writeData(":");
   writeData(keySize);
   writeData(":");
   writeData(key);

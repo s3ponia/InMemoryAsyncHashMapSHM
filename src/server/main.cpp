@@ -3,6 +3,7 @@
 #include <atomic>
 #include <fcntl.h>
 #include <semaphore.h>
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -33,6 +34,10 @@ void atExit() {
   unlinkSem();
   unlinkShm();
 }
+void terminateHandle(int) {
+  atExit();
+  std::abort();
+}
 
 int main(int argc, char **argv) {
   if (argc != 2) {
@@ -50,9 +55,9 @@ int main(int argc, char **argv) {
   }
 
   std::atexit(atExit);
+  signal(SIGINT, terminateHandle);
 
-  sem_t *semaphore =
-      sem_open(SEM_NAME, O_CREAT | O_EXCL | O_RDWR, SEM_PERMS, 0);
+  sem_t *semaphore = sem_open(SEM_NAME, O_CREAT | O_RDWR, SEM_PERMS, 0);
 
   if (semaphore == SEM_FAILED) {
     perror("sem_open(3) error");

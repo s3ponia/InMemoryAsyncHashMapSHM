@@ -10,7 +10,7 @@ Client::Client(char *shared_memory, std::size_t shared_memory_size)
 
 Client::~Client() { running_ = false; }
 
-std::optional<Connection> Client::connect() {
+std::optional<std::shared_ptr<ClientConnection>> Client::connect() {
   sem_post(conn_semaphore_req_);
   sem_wait(conn_semaphore_resp_);
   const auto offset = *offset_in_shm_;
@@ -19,14 +19,14 @@ std::optional<Connection> Client::connect() {
   if (offset == -1) {
     return std::nullopt;
   } else {
-    auto res =
-        Connection{offset, *(SharedMemoryBuff *)(shared_memory_ + offset)};
+    auto res = std::make_shared<ClientConnection>(
+        offset, *(SharedMemoryBuff *)(shared_memory_ + offset));
 
-    std::clog << "Established connection with offset " << res.buffOffset()
+    std::clog << "Established connection with offset " << res->buffOffset()
               << std::endl;
     std::thread{[this, res]() mutable {
       while (running_) {
-        res.waitPing();
+        res->waitPing();
       }
     }}.detach();
 

@@ -3,11 +3,12 @@
 #include <semaphore.h>
 
 #include <atomic>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <vector>
 
-#include "utility/Connection.hpp"
+#include "utility/ClientConnection.hpp"
 #include "utility/ThreadPool.hpp"
 #include "utility/constants.hpp"
 
@@ -15,7 +16,7 @@ class Client {
 public:
   Client(char *shared_memory, std::size_t shared_memory_size);
 
-  std::optional<Connection> connect();
+  std::optional<std::shared_ptr<ClientConnection>> connect();
 
   ~Client();
 

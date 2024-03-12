@@ -13,7 +13,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 include_directories(src)
 
-file(GLOB UTILITY_SOUCE_FILES "src/utility/*")
+file(GLOB UTILITY_SOUCE_FILES "src/utility/*.cpp")
 
 set(SERVER_SOURCE_FILES src/server/main.cpp src/server/Server.cpp)
 

@@ -42,18 +42,19 @@ void Connection::unlinkSemaphores() {
   sem_unlink(semPingRespNameFromOffset(offset_).c_str());
 }
 
-void Connection::insert(std::string_view key, std::string_view value) {
-  requests_shm_.writeInsert(key, value);
+void Connection::insert(std::size_t reqId, std::string_view key,
+                        std::string_view value) {
+  requests_shm_.writeInsert(reqId, key, value);
   sem_post(sem_req_);
 }
 
-void Connection::erase(std::string_view key) {
-  requests_shm_.writeErase(key);
+void Connection::erase(std::size_t reqId, std::string_view key) {
+  requests_shm_.writeErase(reqId, key);
   sem_post(sem_req_);
 }
 
-void Connection::read(std::string_view key) {
-  requests_shm_.writeRead(key);
+void Connection::read(std::size_t reqId, std::string_view key) {
+  requests_shm_.writeRead(reqId, key);
   sem_post(sem_req_);
 }
 

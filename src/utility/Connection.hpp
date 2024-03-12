@@ -15,9 +15,9 @@ class Connection {
 public:
   Connection(std::size_t offset, SharedMemoryBuff &shm_buffer);
 
-  void insert(std::string_view key, std::string_view value);
-  void erase(std::string_view key);
-  void read(std::string_view key);
+  void insert(std::size_t reqId, std::string_view key, std::string_view value);
+  void erase(std::size_t reqId, std::string_view key);
+  void read(std::size_t reqId, std::string_view key);
 
   bool ping();
   void waitPing();
